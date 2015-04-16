@@ -14,7 +14,6 @@ fi
 
 # export HADOOP_HOME=/usr/usc/hadoop/default
 export HADOOP_HOME=/home/rcf-40/mingyihs/hadoop-proj/hadoop
-# export HADOOP_HOME=/home/hadoop/hadoop
 export HADOOP_INSTALL=$HADOOP_HOME
 export HADOOP_MAPRED_HOME=$HADOOP_HOME
 export HADOOP_COMMON_HOME=$HADOOP_HOME
@@ -25,7 +24,6 @@ export PATH=$PATH:$HADOOP_HOME/sbin:$HADOOP_HOME/bin:${JAVA_HOME}/bin
 
 # These vars can be set for development purposes but default to production values
 HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-$TMPDIR/hadoop/logs}
-# HADOOP_CONF_DIR=${HADOOP_CONF_DIR:-/scratch/hadoop/conf}
 HADOOP_CONF_DIR=${HADOOP_CONF_DIR:-/scratch/hadoop/conf}
 HADOOP_TEMPLATE_DIR=${HADOOP_TEMPLATE_DIR:-/home/rcf-40/mingyihs/hadoop-proj/conf/}
 
@@ -34,7 +32,6 @@ HADOOP_MAP_TASK_HEAP=${HADOOP_MAP_TASK_HEAP:-1024}
 HADOOP_REDUCE_TASK_HEAP=${HADOOP_REDUCE_TASK_HEAP:-1024}
 
 
-MAPRED_SYSTEM_DIR=$TMPDIR/hadoop/mapred/system
 MAPRED_HOSTS=${HADOOP_CONF_DIR}/slaves
 max_map_tasks=${HADOOP_MAX_MAP_TASKS:-$PBS_NUM_PPN}
 max_reduce_tasks=${HADOOP_MAX_REDUCE_TASKS:-$PBS_NUM_PPN}
@@ -45,31 +42,26 @@ max_reduce_tasks=${HADOOP_MAX_REDUCE_TASKS:-$PBS_NUM_PPN}
 isolate_jobclient=${HADOOP_ISOLATE_JOB_CLIENT:-no}
 isolate_jobtracker=${HADOOP_ISOLATE_JOB_TRACKER:=no}
 
-# Create the needed filesystems on the nodes and setup the hadoop configuration
+# Configure the nodes and launch HDFS and YARN among nodes
+# Distributed the configuration files through scratch file system, OrangeFS.
 if [ -d /scratch ]; then
   echo $(date) - Setting up Hadoop Cluster
   echo Hadoop configuration is in ${HADOOP_CONF_DIR}
   echo Hadoop logs are in ${HADOOP_LOG_DIR} 
 
-  mkdir -p $MAPRED_SYSTEM_DIR
   mkdir -p $HADOOP_CONF_DIR
   
-  echo $TMPDIR
-
-  #
   # Create hadoop config for a job on the USC HPCC cluster
-  #
   /usr/bin/rsync -a $HADOOP_TEMPLATE_DIR/ $HADOOP_CONF_DIR/
 
-  # Create the slaves file but leave the first hostname free and the last hostname to be the job tracker to maxmize memory
-  # in the reverse lookup HPCC reverse dns gives a different name when compared to Torque 
-  for tasktracker in $(cat $PBS_NODEFILE | sort -u); do  
-    getent hosts $tasktracker | awk '{print $2}' 
+  # Setup the slaves file to be the hostnames as the NodeManagers or DataNodes
+  for nodeManager in $(cat $PBS_NODEFILE | sort -u); do  
+    getent hosts $nodeManager | awk '{print $2}' 
   done > ${MAPRED_HOSTS}
 
   # Create local temp directories on the task nodes
-  for tasktracker in $(cat ${MAPRED_HOSTS}); do  
-    ssh $tasktracker "mkdir -p $HADOOP_LOG_DIR"
+  for nodeManager in $(cat ${MAPRED_HOSTS}); do  
+    ssh $nodeManager "mkdir -p $HADOOP_LOG_DIR"
   done
 
   # Modify the MAPRED_HOSTS file to remove the SUBMISSION_NODE and MASTER entries.  The first entry is for the user's
@@ -83,7 +75,10 @@ if [ -d /scratch ]; then
   if [ $isolate_jobtracker != "no" ]; then
     sed -i -e "/$MASTER/d" ${MAPRED_HOSTS}
   fi 
+  # Modify the master file to let all the nodes know the hostname of NameNode and ResourceManager
   echo $MASTER > ${HADOOP_CONF_DIR}/masters
+  
+  # Randomly (the last node in the list) chosen a node to be the secondary NameNode
   SECONDARYNAMENODE=$(sed -n '$p' ${MAPRED_HOSTS})
 
   # We need at least 1 mapred task host
@@ -102,31 +97,29 @@ if [ -d /scratch ]; then
          -e "s/#REDUCETASKHEAP#/$HADOOP_REDUCE_TASK_HEAP/g" \
          ${HADOOP_CONF_DIR}/mapred-site.xml 
 
+  # Setup the $TMPDIR to be the base of all the Hadoop operations
   tmp_dir=$TMPDIR/hadoop
   tmp_dir=$(echo $tmp_dir | sed 's/\//\\\//g')
   sed -i -e "s/#MASTER#/$MASTER/g" \
          -e "s/#TMPDIR#/$tmp_dir/g" \
          ${HADOOP_CONF_DIR}/core-site.xml 
 
+  # Define the hostname of the SourceManager
   sed -i -e "s/#MASTER#/$MASTER/g" \
          ${HADOOP_CONF_DIR}/yarn-site.xml
 
-
+  # Define the hostname of the Secondary NameNode
   sed -i -e "s/#SECONDARY_HTTP#/$SECONDARYNAMENODE/g" \
        ${HADOOP_CONF_DIR}/hdfs-site.xml
 
-		 
+  # Setup the required environment variables in the launch up script of Hadoop 
   echo "export HADOOP_LOG_DIR=${HADOOP_LOG_DIR}" >> ${HADOOP_CONF_DIR}/hadoop-env.sh
   echo "export PATH=${PATH}" >> ${HADOOP_CONF_DIR}/hadoop-env.sh
   echo "export JAVA_HOME=${JAVA_HOME}" >> ${HADOOP_CONF_DIR}/hadoop-env.sh
-  # echo $JAVA_HOME
 
-  # export HADOOP_CONF_DIR
-
-  #
-  # Start the job tracker and task trackers
-  #
-  echo $(date) - Starting job tracker on $MASTER
+  # 1. Format the NameNode
+  # 2. Start the NameNode, DataNodes, Secondary NameNode
+  # 3. Start the Source Manager and Node Managers
   ssh $MASTER "${HADOOP_HOME}/bin/hdfs namenode -format"
   ssh $MASTER "HADOOP_HEAP=$HADOOP_HEAP; ${HADOOP_HOME}/sbin/start-dfs.sh"
   ssh $MASTER "HADOOP_HEAP=$HADOOP_HEAP; ${HADOOP_HOME}/sbin/start-yarn.sh"
