@@ -1,0 +1,43 @@
+# !/bin/bash
+# Hadoop HPCC Cluster Test Job
+#PBS -k eo
+#PBS -j eo
+#PBS -l walltime=00:20:00
+#PBS -l nodes=3:ppn=6
+#PBS -l pmem=2g
+
+# if HADOOP_CONF_DIR is not defined try to define it
+if [ -z "$HADOOP_CONF_DIR" ]; then
+    export HADOOP_CONF_DIR=/scratch/hadoop/conf
+fi
+
+# setup your own hadoop path
+WORK_HOME=/home/rcf-40/mingyihs/hadoop-proj
+
+echo $(date) - HADOOP PBS Job Started
+
+source $WORK_HOME/setup.sh
+
+# This starts the job and task trackers
+$WORK_HOME/setup-and-start-hadoop-on-hpcc
+
+# Check to make sure hadoop started up before running our code.
+if [ $? -eq 0 ]; then
+  # start the pi estimation job
+  cd $WORK_HOME
+  rsync -av $HADOOP_CONF_DIR $WORK_HOME/hadoop
+
+  sleep 10m
+  # hadoop dfs -copyFromLocal pg20417.txt /user/hduser/wordcount/pg20417.txt
+  # hadoop dfs -ls /user/hduser/wordcount
+  # hadoop jar /usr/usc/hadoop/1.1.2/hadoop-examples-1.1.2.jar wordcount /user/hduser/wordcount /user/hduser/wordcount-output
+  # hadoop dfs -cat /user/hduser/wordcount-output/part-r-00000
+  # hadoop jar /usr/usc/hadoop/1.1.2/hadoop-examples-1.1.2.jar pi 250 1000
+
+  # when this script exits the hadoop cluster is shutdown so copy off data here
+  # rsync -av $TMPDIR/hadoop/logs ~/logs
+
+fi
+
+echo $(date) - HADOOP PBS Job Finished
+

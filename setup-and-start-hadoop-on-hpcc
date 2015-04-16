@@ -1,0 +1,137 @@
+#!/bin/bash
+
+if [ -z "$MINGENV_HADOOP" ]; then
+  echo "Please source the setup file before trying to start hadoop"
+  exit 1
+fi
+
+# if JAVA_HOME is not defined try to define it
+if [ -z "$JAVA_HOME" ]; then
+  export JAVA_HOME=/usr/lib/jvm/java
+  echo "no JAVA_HOME, set as $JAVA_HOME"
+fi
+
+
+# export HADOOP_HOME=/usr/usc/hadoop/default
+export HADOOP_HOME=/home/rcf-40/mingyihs/hadoop-proj/hadoop
+# export HADOOP_HOME=/home/hadoop/hadoop
+export HADOOP_INSTALL=$HADOOP_HOME
+export HADOOP_MAPRED_HOME=$HADOOP_HOME
+export HADOOP_COMMON_HOME=$HADOOP_HOME
+export HADOOP_HDFS_HOME=$HADOOP_HOME
+export YARN_HOME=$HADOOP_HOME
+export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native
+export PATH=$PATH:$HADOOP_HOME/sbin:$HADOOP_HOME/bin:${JAVA_HOME}/bin
+
+# These vars can be set for development purposes but default to production values
+HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-$TMPDIR/hadoop/logs}
+# HADOOP_CONF_DIR=${HADOOP_CONF_DIR:-/scratch/hadoop/conf}
+HADOOP_CONF_DIR=${HADOOP_CONF_DIR:-/scratch/hadoop/conf}
+HADOOP_TEMPLATE_DIR=${HADOOP_TEMPLATE_DIR:-/home/rcf-40/mingyihs/hadoop-proj/conf/}
+
+# These could be set by the user if needed
+HADOOP_MAP_TASK_HEAP=${HADOOP_MAP_TASK_HEAP:-1024}
+HADOOP_REDUCE_TASK_HEAP=${HADOOP_REDUCE_TASK_HEAP:-1024}
+
+
+MAPRED_SYSTEM_DIR=$TMPDIR/hadoop/mapred/system
+MAPRED_HOSTS=${HADOOP_CONF_DIR}/slaves
+max_map_tasks=${HADOOP_MAX_MAP_TASKS:-$PBS_NUM_PPN}
+max_reduce_tasks=${HADOOP_MAX_REDUCE_TASKS:-$PBS_NUM_PPN}
+
+
+# export ISOLATE_JOB_CLIENT and ISOLATE_JOB_TRACKER to be yes if you
+# want them on nodes which have no mapreduce task processes
+isolate_jobclient=${HADOOP_ISOLATE_JOB_CLIENT:-no}
+isolate_jobtracker=${HADOOP_ISOLATE_JOB_TRACKER:=no}
+
+# Create the needed filesystems on the nodes and setup the hadoop configuration
+if [ -d /scratch ]; then
+  echo $(date) - Setting up Hadoop Cluster
+  echo Hadoop configuration is in ${HADOOP_CONF_DIR}
+  echo Hadoop logs are in ${HADOOP_LOG_DIR} 
+
+  mkdir -p $MAPRED_SYSTEM_DIR
+  mkdir -p $HADOOP_CONF_DIR
+  
+  echo $TMPDIR
+
+  #
+  # Create hadoop config for a job on the USC HPCC cluster
+  #
+  /usr/bin/rsync -a $HADOOP_TEMPLATE_DIR/ $HADOOP_CONF_DIR/
+
+  # Create the slaves file but leave the first hostname free and the last hostname to be the job tracker to maxmize memory
+  # in the reverse lookup HPCC reverse dns gives a different name when compared to Torque 
+  for tasktracker in $(cat $PBS_NODEFILE | sort -u); do  
+    getent hosts $tasktracker | awk '{print $2}' 
+  done > ${MAPRED_HOSTS}
+
+  # Create local temp directories on the task nodes
+  for tasktracker in $(cat ${MAPRED_HOSTS}); do  
+    ssh $tasktracker "mkdir -p $HADOOP_LOG_DIR"
+  done
+
+  # Modify the MAPRED_HOSTS file to remove the SUBMISSION_NODE and MASTER entries.  The first entry is for the user's
+  # hadoop job submission process and the last entry is for the job tracker. This is done to give more memory to 
+  # all of the hadoop processes.
+  SUBMISSION_NODE=$(getent hosts $(/bin/hostname) | awk '{print $2}')
+  if [ $isolate_jobclient != "no" ]; then
+    sed -i -e "/$SUBMISSION_NODE/d" ${MAPRED_HOSTS}
+  fi
+  MASTER=$(head -n 1 ${MAPRED_HOSTS})
+  if [ $isolate_jobtracker != "no" ]; then
+    sed -i -e "/$MASTER/d" ${MAPRED_HOSTS}
+  fi 
+  echo $MASTER > ${HADOOP_CONF_DIR}/masters
+  SECONDARYNAMENODE=$(sed -n '$p' ${MAPRED_HOSTS})
+
+  # We need at least 1 mapred task host
+  cat ${MAPRED_HOSTS}
+  if [ ! $(cat ${MAPRED_HOSTS} | wc -l) -gt 0 ]; then
+    echo "ERROR: at least 1 node is needed to run hadoop map reduce tasks.  Please increase the value of nodes= in your qsub parameter."
+    exit 1
+  fi
+
+  mapred_hosts=$(echo $MAPRED_HOSTS | sed 's/\//\\\//g')
+  sed -i -e "s/#MASTER#/$MASTER/g" \
+         -e "s/#MAPREDHOSTS#/$mapred_hosts/g" \
+         -e "s/#MAPTASKS#/$max_map_tasks/g" \
+         -e "s/#REDUCETASKS#/$max_reduce_tasks/g" \
+         -e "s/#MAPTASKHEAP#/$HADOOP_MAP_TASK_HEAP/g" \
+         -e "s/#REDUCETASKHEAP#/$HADOOP_REDUCE_TASK_HEAP/g" \
+         ${HADOOP_CONF_DIR}/mapred-site.xml 
+
+  tmp_dir=$TMPDIR/hadoop
+  tmp_dir=$(echo $tmp_dir | sed 's/\//\\\//g')
+  sed -i -e "s/#MASTER#/$MASTER/g" \
+         -e "s/#TMPDIR#/$tmp_dir/g" \
+         ${HADOOP_CONF_DIR}/core-site.xml 
+
+  sed -i -e "s/#MASTER#/$MASTER/g" \
+         ${HADOOP_CONF_DIR}/yarn-site.xml
+
+
+  sed -i -e "s/#SECONDARY_HTTP#/$SECONDARYNAMENODE/g" \
+       ${HADOOP_CONF_DIR}/hdfs-site.xml
+
+		 
+  echo "export HADOOP_LOG_DIR=${HADOOP_LOG_DIR}" >> ${HADOOP_CONF_DIR}/hadoop-env.sh
+  echo "export PATH=${PATH}" >> ${HADOOP_CONF_DIR}/hadoop-env.sh
+  echo "export JAVA_HOME=${JAVA_HOME}" >> ${HADOOP_CONF_DIR}/hadoop-env.sh
+  # echo $JAVA_HOME
+
+  # export HADOOP_CONF_DIR
+
+  #
+  # Start the job tracker and task trackers
+  #
+  echo $(date) - Starting job tracker on $MASTER
+  ssh $MASTER "${HADOOP_HOME}/bin/hdfs namenode -format"
+  ssh $MASTER "HADOOP_HEAP=$HADOOP_HEAP; ${HADOOP_HOME}/sbin/start-dfs.sh"
+  ssh $MASTER "HADOOP_HEAP=$HADOOP_HEAP; ${HADOOP_HOME}/sbin/start-yarn.sh"
+
+else
+  echo "ERROR: The /scratch filesystem does not exist.  Unable to run hadoop jobs without /scratch"
+  exit 1
+fi

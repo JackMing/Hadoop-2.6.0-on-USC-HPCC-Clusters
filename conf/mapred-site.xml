@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+
+  <property>
+    <name>mapred.job.tracker</name>
+    <value>#MASTER#:9001</value>
+  </property>
+
+  <!--
+  <property>
+    <name>mapreduce.jobtracker.staging.root.dir</name>
+    <value>#JOBTRACKERSTAGINGROOTDIR#</value>
+  </property>
+  -->
+  <!--
+  <property>
+    <name>mapreduce.jobtracker.staging.root.dir</name>
+    <value>/scratch/hadoop/jobtracker/staging</value>
+  </property>
+
+  <property>
+    <name>mapred.system.dir</name>
+    <value>/scratch/hadoop/mapred/system</value>
+  </property>
+
+  <property>
+    <name>mapred.local.dir</name>
+    <value>#MAPREDLOCALDIR#</value>
+  </property>
+  -->
+
+  <property>
+    <name>mapreduce.jobtracker.hosts.filename</name>
+    <value>#MAPREDHOSTS#</value>
+  </property>
+
+  <property>
+    <name>mapreduce.tasktracker.map.tasks.maximum</name>
+    <value>#MAPTASKS#</value>
+  </property>
+
+  <property>
+    <name>mapreduce.tasktracker.reduce.tasks.maximum</name>
+    <value>#REDUCETASKS#</value>
+  </property>
+
+  <property>
+    <name>mapreduce.map.java.opts</name>
+    <value>-Xmx#MAPTASKHEAP#M</value>
+  </property>
+
+  <property>
+    <name>mapreduce.reduce.java.opts</name>
+    <value>-Xmx#REDUCETASKHEAP#M</value>
+  </property>
+
+  <property>
+    <name>mapreduce.framework.name</name>
+    <value>yarn</value>
+  </property>
+
+</configuration>
