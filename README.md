@@ -1,12 +1,12 @@
 # Hadoop-2.6.0-on-USC-HPCC-Clusters
-# Hadoop-1.1.2-on-USC-HPCC-Cluster
-This project is meant to suppport Hadoop-1.1.2 on USC HPCC clusters. The current version of Hadoop provided by HPCC relies on /scratch filesystem rather than HDFS. In this case, the HPC users execute their Hadoop programs by putting their files into /scratch, and then Hadoop will access the data files in /scratch when running the map-reduce. Here shows how Hadoop-1.1.2 can successfully launch up HDFS on HPCC cluster. We provide two different tutorials as options to run Hadoop. 
+
+This project is meant to suppport Hadoop-2.6.0 on USC HPCC clusters. The current version of Hadoop provided by HPCC is Hadoop-1.1.2, which relies on /scratch filesystem rather than HDFS. In this case, the HPC users execute their Hadoop programs by putting their files into /scratch, and then Hadoop will access the data files in /scratch when running the map-reduce. Here shows how Hadoop-2.6.0 can successfully launch up HDFS and YARN on HPCC cluster. We provide two different tutorials as options to run Hadoop. 
 
 <Option 1> **Interactive mode**
 
 1. Copy hadoop repository to your working directory.
 
-          git clone https://github.com/JackMing/Hadoop-1.1.2-on-USC-HPCC-Cluster.git
+          git clone https://github.com/JackMing/Hadoop-2.6.0-on-USC-HPCC-Cluster.git
 
 2. In `setup-and-start-hadoop-on-hpcc`, change line 8 `HADOOP_TEMPLATE_DIR` to your working directory, specifically where your conf/ folder is.
 
@@ -16,7 +16,7 @@ This project is meant to suppport Hadoop-1.1.2 on USC HPCC clusters. The current
 
           qsub -d . -l 'walltime=00:30:00,nodes=3,ppn=6,pmem=2g' -I
 
-4. Before you start your hadoop program, you should run the following setup commands first to launch up the HDFS.
+4. Before you start your hadoop program, you should run the following setup commands first to launch up the HDFS and YARN.
 
           source setup.sh
           setup-and-start-hadoop-on-hpcc
@@ -31,9 +31,9 @@ This project is meant to suppport Hadoop-1.1.2 on USC HPCC clusters. The current
 
 1. Copy hadoop repository to your working directory. 
 
-          git clone https://github.com/JackMing/Hadoop-1.1.2-on-USC-HPCC-Cluster.git
+          git clone https://github.com/JackMing/Hadoop-2.6.0-on-USC-HPCC-Cluster.git
 
-2. In PBS script `Hadoop-example.pbs`, modify your WORK_HOME path. 
+2. In PBS script `hadoop-example.pbs`, modify your WORK_HOME path. 
 3. The current PBS script will run the hadoop example (wordcount). If you want to run other examples, modify the corresponding paths.
 4. In `setup-and-start-hadoop-on-hpcc`, change line 8 `HADOOP_TEMPLATE_DIR` to your working directory, specifically where your conf/ folder is.
 
@@ -41,4 +41,4 @@ This project is meant to suppport Hadoop-1.1.2 on USC HPCC clusters. The current
 
 5. Submit PBS script.
 
-          qsub Hadoop-example.pbs
+          qsub hadoop-example.pbs
