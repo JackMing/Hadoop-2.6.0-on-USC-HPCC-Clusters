@@ -6,13 +6,10 @@
 #PBS -l nodes=3:ppn=6
 #PBS -l pmem=2g
 
-# if HADOOP_CONF_DIR is not defined try to define it
-if [ -z "$HADOOP_CONF_DIR" ]; then
-    export HADOOP_CONF_DIR=/scratch/hadoop/conf
-fi
-
 # setup your own hadoop path
-WORK_HOME=/home/rcf-40/mingyihs/hadoop-proj
+WORK_HOME=/path/to/your/working/dir
+# setup hadoop home for running hadoop example
+HADOOP_HOME=/path/to/hadoop-2.6.0/home/dir
 
 echo $(date) - HADOOP PBS Job Started
 
@@ -25,18 +22,16 @@ $WORK_HOME/setup-and-start-hadoop-on-hpcc
 if [ $? -eq 0 ]; then
   # start the pi estimation job
   cd $WORK_HOME
-  rsync -av $HADOOP_CONF_DIR $WORK_HOME/hadoop
-
-  sleep 10m
-  # hadoop dfs -copyFromLocal pg20417.txt /user/hduser/wordcount/pg20417.txt
-  # hadoop dfs -ls /user/hduser/wordcount
-  # hadoop jar /usr/usc/hadoop/1.1.2/hadoop-examples-1.1.2.jar wordcount /user/hduser/wordcount /user/hduser/wordcount-output
+  
+  hadoop dfs -mkdir -p /user/hduser/wordcount
+  hadoop dfs -copyFromLocal pg20417.txt /user/hduser/wordcount/pg20417.txt
+  hadoop dfs -ls /user/hduser/wordcount
+  hadoop jar $HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.6.0.jar wordcount /user/hduser/wordcount /user/hduser/wordcount-output
   # hadoop dfs -cat /user/hduser/wordcount-output/part-r-00000
-  # hadoop jar /usr/usc/hadoop/1.1.2/hadoop-examples-1.1.2.jar pi 250 1000
+  # hadoop jar $HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.6.0.jar pi 250 1000
 
   # when this script exits the hadoop cluster is shutdown so copy off data here
-  # rsync -av $TMPDIR/hadoop/logs ~/logs
-
+  hadoop dfs -copyToLocal /user/hduser/wordcount-output/part-r-00000 ./
 fi
 
 echo $(date) - HADOOP PBS Job Finished
