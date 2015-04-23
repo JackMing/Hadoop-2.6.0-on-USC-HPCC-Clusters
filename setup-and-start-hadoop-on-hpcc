@@ -11,9 +11,10 @@ if [ -z "$JAVA_HOME" ]; then
   echo "no JAVA_HOME, set as $JAVA_HOME"
 fi
 
+HADOOP_TEMPLATE_DIR=${HADOOP_TEMPLATE_DIR:-/path/to/configuration/dir}
 
 # export HADOOP_HOME=/usr/usc/hadoop/default
-export HADOOP_HOME=/home/rcf-40/mingyihs/hadoop-proj/hadoop
+export HADOOP_HOME=/path/to/hadoop/home/directory/
 export HADOOP_INSTALL=$HADOOP_HOME
 export HADOOP_MAPRED_HOME=$HADOOP_HOME
 export HADOOP_COMMON_HOME=$HADOOP_HOME
@@ -25,7 +26,6 @@ export PATH=$PATH:$HADOOP_HOME/sbin:$HADOOP_HOME/bin:${JAVA_HOME}/bin
 # These vars can be set for development purposes but default to production values
 HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-$TMPDIR/hadoop/logs}
 HADOOP_CONF_DIR=${HADOOP_CONF_DIR:-/scratch/hadoop/conf}
-HADOOP_TEMPLATE_DIR=${HADOOP_TEMPLATE_DIR:-/home/rcf-40/mingyihs/hadoop-proj/conf/}
 
 # These could be set by the user if needed
 HADOOP_MAP_TASK_HEAP=${HADOOP_MAP_TASK_HEAP:-1024}
