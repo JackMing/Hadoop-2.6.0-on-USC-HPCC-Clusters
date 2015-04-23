@@ -12,7 +12,7 @@ This project is meant to suppport Hadoop-2.6.0 on USC HPCC clusters. The current
 
           HADOOP_TEMPLATE_DIR=${HADOOP_TEMPLATE_DIR:-/path/to/configuration/template/dir/}
 
-3. In `setup-and-start-hadoop-on-hpcc` and `setup.sh`, chang `HADOOP_HOME` to the path of Hadoop-2.6.0 home directory.
+3. In `setup-and-start-hadoop-on-hpcc` and `setup.sh`, change `HADOOP_HOME` to the path of Hadoop-2.6.0 home directory.
 
           HADOOP_HOME=/path/to/hadoop/home/directory/
 
@@ -29,7 +29,11 @@ This project is meant to suppport Hadoop-2.6.0 on USC HPCC clusters. The current
 
           hdfs
 
-7. Please remember to copy your output file out from the HDFS each time you finish your operation. The HDFS will be erased after you leave the cluster or the running time exceeds the walltime limit you set up before.
+7. You can run the following example to verify your hadoop is working properly.
+
+          hadoop jar $HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.6.0.jar pi 250 1000
+
+8. Please remember to copy your output file out from the HDFS each time you finish your operation. The HDFS will be erased after you leave the cluster or the running time exceeds the walltime limit you set up before.
 
 <Option 2> **Submit PBS script**
 
@@ -42,7 +46,7 @@ This project is meant to suppport Hadoop-2.6.0 on USC HPCC clusters. The current
 
           HADOOP_TEMPLATE_DIR=${HADOOP_TEMPLATE_DIR:-/path/to/configuration/template/dir/}
 
-3. In `setup-and-start-hadoop-on-hpcc` and `setup.sh`, chang `HADOOP_HOME` to the path of Hadoop-2.6.0 home directory.
+3. In `setup-and-start-hadoop-on-hpcc` and `setup.sh`, change `HADOOP_HOME` to the path of Hadoop-2.6.0 home directory.
 
           HADOOP_HOME=/path/to/hadoop/home/directory/
 
