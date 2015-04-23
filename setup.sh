@@ -6,7 +6,7 @@ if [ ! "${MINGENV_HADOOP}" ] ; then
   JAVA_HOME=/usr/lib/jvm/jre-1.6.0-openjdk.x86_64
 
   # prefix=/usr/usc/hadoop/default
-  prefix=/home/rcf-40/mingyihs/hadoop-proj/hadoop
+  prefix=/path/to/hadoop/home/directory/
   _bindir=$prefix/bin
 
   # export HADOOP_VERSION
