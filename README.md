@@ -11,5 +11,6 @@ If you need more options, please check the main page of qsub.
           source setup.sh
           setup-and-start-hadoop-on-hpcc
       
-3. After the setup, you can submit your hadoop job as you want. You can also manage the HDFS by the command `hdfs`.
+3. After the setup, you can submit your hadoop job as you want. You can also manage the HDFS by the command
+          hdfs
 4. Please remember to copy your output file out from the HDFS each time you finish your operation. The HDFS will be erased after you leave the cluster or the running time exceeds the walltime limit you set up before.
