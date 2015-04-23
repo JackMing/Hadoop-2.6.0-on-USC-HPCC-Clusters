@@ -12,9 +12,10 @@ if [ -z "$JAVA_HOME" ]; then
 fi
 
 HADOOP_TEMPLATE_DIR=${HADOOP_TEMPLATE_DIR:-/path/to/configuration/dir}
+HADOOP_HOME=/path/to/hadoop/home/directory/
 
 # export HADOOP_HOME=/usr/usc/hadoop/default
-export HADOOP_HOME=/path/to/hadoop/home/directory/
+export HADOOP_HOME=$HADOOP_HOME
 export HADOOP_INSTALL=$HADOOP_HOME
 export HADOOP_MAPRED_HOME=$HADOOP_HOME
 export HADOOP_COMMON_HOME=$HADOOP_HOME
