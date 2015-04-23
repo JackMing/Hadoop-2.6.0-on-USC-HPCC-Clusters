@@ -3,6 +3,7 @@ This project is meant to suppport Hadoop-2.6.0 on USC HPCC clusters. The current
 
 1. You need to request nodes by **qsub** and run it in the interactive mode by adding option **-I**
    If you need more options, please check the main page of qsub.
+  > 
   ```
    qsub -d . -l 'walltime=00:30:00,nodes=3,ppn=6,pmem=2g' -I
   ```
